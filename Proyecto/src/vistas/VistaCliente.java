@@ -208,6 +208,7 @@ public class VistaCliente extends javax.swing.JFrame {
 
     private void envioArchivosMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_envioArchivosMouseClicked
         //cliente.envia(lista);
+        cliente.enviarArchivo(lista);
         areaArchivos.append("\nSelecciona nuevos archivos\n\n");
         lista=new File[0];
     }//GEN-LAST:event_envioArchivosMouseClicked

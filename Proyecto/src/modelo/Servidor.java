@@ -7,11 +7,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import javax.swing.JFrame;
-import vistas.VistaServidor;
 
 
-public class Servidor{
+public class Servidor extends Thread{
 
     private int puerto;
     private ServerSocket servidor;
@@ -27,17 +25,28 @@ public class Servidor{
                     e.printStackTrace();
             }
     }
+    
+    public Servidor(ServerSocket servidor){
+        this.servidor = servidor;
+    }
 
-    public void aceptaConexion(VistaServidor vista){
+    public void aceptaConexion(){
         try {
             cliente=servidor.accept();
-            dis=new DataInputStream(cliente.getInputStream());
             System.out.println("Cliente conectado desde "+cliente.getInetAddress().getHostAddress()+":"+cliente.getPort()); 
+            new HiloCliente(cliente).start();
+            /*dis=new DataInputStream(cliente.getInputStream());
             vista.setTexto("Recibiendo archivo");
             vista.setTexto(this.recibe()+" recibido\n");
-            this.terminaConexion();
+            this.terminaConexion();*/
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+    
+    public void run(){
+        while(true){
+            aceptaConexion();
         }
     }
 
@@ -50,12 +59,15 @@ public class Servidor{
         }
     }
 
-    public String recibe(){
+    public String recibe(DataInputStream dis){
         try{
             String nombre;
             nombre=dis.readUTF();
-            DataOutputStream dos=new DataOutputStream(new FileOutputStream(new File("src/updates/archivos/"+nombre)));
+            int parte = dis.readInt();
             long tamanio=dis.readLong();
+            System.out.println("Leyendo archivo " + nombre + ".part" + parte);
+            DataOutputStream dos=new DataOutputStream(new FileOutputStream(new File("src/updates/archivos/"+nombre + ".part" + parte)));
+            System.out.println("Tam: " + tamanio);
             long leidos=0;
             int n=0;
             int porcentaje=0;
@@ -64,6 +76,7 @@ public class Servidor{
                 n=dis.read(buffer);
                 dos.write(buffer, 0, n);
                 leidos+=n;
+                System.out.println("Leidos: " + n + ":" + leidos);
                 porcentaje=(int)(leidos*100/tamanio);
                 System.out.print("\rRecibido: "+porcentaje+"%");
             }
@@ -76,27 +89,18 @@ public class Servidor{
         }
 
     }
-
-    public void recibe(int[] archivos){
-        try {
-            int numeroArchivos=dis.readInt();
-            for(int i=0;i<numeroArchivos;i++){
-                recibe();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
     
     private class HiloCliente extends Thread{
         private Socket cliente;
         public HiloCliente(Socket cliente){
+            super();
             this.cliente = cliente;
         }
         public void run(){
             try{
                 DataInputStream dis=new DataInputStream(cliente.getInputStream());
                 System.out.println("Cliente conectado desde "+cliente.getInetAddress().getHostAddress()+":"+cliente.getPort()); 
+                recibe(dis);
                 terminaConexion();
             }catch(IOException ioe){
                 ioe.printStackTrace();

@@ -1,13 +1,17 @@
 package cliente;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import javax.swing.DefaultListModel;
-import javax.swing.JTextPane;
+import modelo.Servidor;
 
 public class Cliente {
     private ServerSocket servidor;
@@ -33,6 +37,7 @@ public class Cliente {
             grupo = null;
             usuarios = new ArrayList();
             this.contactos = contactos;
+            new Servidor(servidor).start();
         }catch(IOException ioe){
             ioe.printStackTrace();
         }
@@ -67,14 +72,6 @@ public class Cliente {
         anuncio.start();
     }
     
-    public void enviarMensajePublico(String mensaje){
-        enviarMensaje("<msj><"+ ipServidor+">"+mensaje);
-    }
-    
-    public void enviarMensajePrivado(String usuario,String mensaje){
-        enviarMensaje("<privado><"+this.ipServidor+"><"+usuario+">"+mensaje);
-    }
-    
     public void escucharMensajes(){
         oyente=new hiloEscucha(clienteMulticast,usuarios,ipServidor, contactos);
         oyente.start();
@@ -86,6 +83,53 @@ public class Cliente {
     
     public String getId(){
         return this.ipServidor + ":" + this.puertoServidor;
+    }
+    
+    public void enviarArchivo(File archivo){
+        try{
+            int numClientes = contactos.size();
+            long tam = archivo.length();
+            byte []buffer = new byte[4096];
+            long enviados = 0, totalEnviados = 0;
+            FileInputStream fis = new FileInputStream(archivo);
+            System.out.println("Servidores conectados: " + numClientes);
+            for (int i = 0; i < contactos.size(); i++) {    //Para cada cliente conectado
+                if (!contactos.isEmpty()) {
+                    String datosServidor = (String)contactos.getElementAt(i);
+                    System.out.println(datosServidor);
+                    String []ipPuerto = datosServidor.split(":");
+                    String ip = ipPuerto[0];
+                    int puerto = Integer.parseInt(ipPuerto[1]);
+                    Socket cliente = new Socket(ip, puerto);
+                    DataOutputStream dis = new DataOutputStream(cliente.getOutputStream());
+                    if(totalEnviados >= tam){break;}
+                    long restantes = tam - totalEnviados;
+                    System.out.println("Enviando archivo " + archivo.getName());
+                    System.out.println("Tam: " + tam + ":" + restantes);
+                    dis.writeUTF(archivo.getName());
+                    dis.writeInt(i + 1);
+                    if(restantes >= 536870912l){dis.writeLong(536870912l);}
+                    else{dis.writeLong(restantes);}
+                    enviados = 0;
+                    while(enviados < 536870912l){ // 500 Megas a cada cliente
+                        System.out.println("Enviados: " + enviados);
+                        int leidos = fis.read(buffer);
+                        if(leidos < 1){break;}
+                        dis.write(buffer, 0 , leidos);
+                        enviados+=leidos;
+                        totalEnviados += leidos;
+                    }
+                    dis.close();
+                    cliente.close();
+                }
+            }
+        }catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+    }
+    
+    public void enviarArchivo(File []archivos){
+        this.enviarArchivo(archivos[0]);
     }
     
     
