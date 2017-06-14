@@ -43,7 +43,7 @@ public class Anuncio extends Thread{
   public void enviarMensaje(String mensaje){
         DatagramPacket paquete = new DatagramPacket(mensaje.getBytes(),mensaje.length(),grupo,puerto);
         try {
-            System.out.println("Enviando: " + mensaje+"  con un TTL= "+cliente.getTimeToLive());
+            //System.out.println("Enviando: " + mensaje+"  con un TTL= "+cliente.getTimeToLive());
             cliente.send(paquete);
         } catch (IOException ioe) {
             ioe.printStackTrace();

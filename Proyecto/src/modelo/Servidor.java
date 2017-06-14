@@ -76,7 +76,6 @@ public class Servidor extends Thread{
                 n=dis.read(buffer);
                 dos.write(buffer, 0, n);
                 leidos+=n;
-                System.out.println("Leidos: " + n + ":" + leidos);
                 porcentaje=(int)(leidos*100/tamanio);
                 System.out.print("\rRecibido: "+porcentaje+"%");
             }
