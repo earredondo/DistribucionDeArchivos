@@ -91,6 +91,36 @@ public class Servidor extends Thread{
 
     }
     
+    public String recibeMeta(DataInputStream dis){
+        try{
+            String nombre;
+            nombre=dis.readUTF();
+            long tamanio=dis.readLong();
+            String path = crearDirectorioMeta();
+            System.out.println("Leyendo archivo " + nombre);
+            DataOutputStream dos=new DataOutputStream(new FileOutputStream(new File(path + nombre)));
+            System.out.println("Tam: " + tamanio);
+            long leidos=0;
+            int n=0;
+            int porcentaje=0;
+            byte[] buffer=new byte[1500];
+            while(leidos<tamanio){
+                n=dis.read(buffer);
+                dos.write(buffer, 0, n);
+                leidos+=n;
+                porcentaje=(int)(leidos*100/tamanio);
+                System.out.print("\rRecibido: "+porcentaje+"%");
+            }
+            System.out.println("\n"+nombre+" recibido");
+            dos.close();
+            return nombre;
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
+        }
+
+    }
+    
     public void enviar(Socket cliente){
         try{
             DataInputStream dis = new DataInputStream(cliente.getInputStream());
@@ -137,6 +167,7 @@ public class Servidor extends Thread{
                 String operacion = dis.readUTF();
                 if("subir".equals(operacion)){recibe(dis);}
                 else if("descargar".equals(operacion)){enviar(cliente);}
+                else if("meta".equals(operacion)){recibeMeta(dis);}
                 terminaConexion();
             }catch(IOException ioe){
                 ioe.printStackTrace();
@@ -167,6 +198,31 @@ public class Servidor extends Thread{
             }
         }
         return "src/updates/archivos/" + id + "/";
+    }
+    
+    private String crearDirectorioMeta(){
+        String ip = this.servidor.getInetAddress().getHostAddress();
+        int puerto = this.servidor.getLocalPort();
+        String id = ip + ":" + puerto;
+        File theDir = new File("src/updates/metadatos/" + id + "/");
+
+        // if the directory does not exist, create it
+        if (!theDir.exists()) {
+            //System.out.println("creating directory: " + theDir.getName());
+            boolean result = false;
+
+            try{
+                theDir.mkdir();
+                result = true;
+            } 
+            catch(SecurityException se){
+                //handle it
+            }        
+            if(result) {    
+                //System.out.println("DIR created");  
+            }
+        }
+        return "src/updates/metadatos/" + id + "/";
     }
     /*
     public static void main(String []args){

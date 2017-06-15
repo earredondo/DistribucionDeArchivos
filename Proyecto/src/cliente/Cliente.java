@@ -46,16 +46,17 @@ public class Cliente {
     private final int VECES_REPETIDO;
     
     public Cliente(DefaultListModel contactos, DefaultListModel archivos){
-        this.FRAGMENT_SIZE = 268435456l;
+        this.FRAGMENT_SIZE = 134217728l;
         this.VECES_REPETIDO = 2;
-        this.ipServidor = "192.168.0.2";
+        this.ipServidor = "10.100.65.48";
+        this.puertoServidor = 0;
         this.ipCliente = "127.0.0.1";
         grupo = null;
         usuarios = new ArrayList();
         this.contactos = contactos;
         this.archivos = archivos;
         try{
-            servidor=new ServerSocket(0, 5, InetAddress.getByName(ipServidor));
+            servidor=new ServerSocket(this.puertoServidor, 5, InetAddress.getByName(ipServidor));
             this.puertoServidor = this.servidor.getLocalPort();
             new Servidor(servidor).start();
             new MonitorArchivos(this.archivos, this.ipServidor + ":" + this.puertoServidor).start();
@@ -132,7 +133,7 @@ public class Cliente {
             f.setSize(300, 100);
             f.setVisible(true);
             for (i = 0, j = 1; i < contactos.size(); i++, j++) {    //Para cada cliente conectado
-                if (!contactos.isEmpty()) {
+                if (!contactos.isEmpty()) {                         //enviar un fragmento
                     String datosServidor = (String)contactos.getElementAt(i);
                     System.out.println(datosServidor);
                     String []ipPuerto = datosServidor.split(":");
@@ -174,10 +175,51 @@ public class Cliente {
             fos.close();
             
             /*Enviar por multicast el descriptor de archivo */
-                anuncio.pause();
-                enviarMensaje("<archivo>");
-                enviarArchivo(meta);
-                anuncio.resum();
+            /*anuncio.pause();
+            enviarMensaje("<archivo>");
+            enviarArchivo(meta);
+            anuncio.resum();*/
+            enviarArchivoCompleto(meta);
+        }catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+    }
+    
+    public void enviarArchivoCompleto(File archivo){
+        int i;
+        long tam = archivo.length();
+        byte []buffer = new byte[4096];
+        try{
+            FileInputStream fis = null;
+            for (i = 0; i < contactos.size(); i++) {    //Para cada cliente conectado
+                if (!contactos.isEmpty()) {                         //enviar un fragmento
+                    fis = new FileInputStream(archivo);
+                    long enviados = 0;
+                    String datosServidor = (String)contactos.getElementAt(i);
+                    System.out.println(datosServidor);
+                    String []ipPuerto = datosServidor.split(":");
+                    String ip = ipPuerto[0];
+                    int puerto = Integer.parseInt(ipPuerto[1]);
+                    Socket cliente = new Socket(ip, puerto);
+                    DataOutputStream dis = new DataOutputStream(cliente.getOutputStream());
+                    dis.writeUTF("meta");
+                    dis.writeUTF(archivo.getName());
+                    dis.writeLong(tam);
+
+                    while(enviados < tam){
+                        int leidos = fis.read(buffer);
+                        if(leidos < 1){break;}
+                        dis.write(buffer, 0 , leidos);
+                        enviados+=leidos;
+                        enviados += leidos;
+                        int porcentaje = (int) ((enviados * 100)/tam);
+                        System.out.print("\rEnviado: " + porcentaje + "%");
+                    }
+                    dis.close();
+                    cliente.close();
+                }
+            }
+            if(fis!=null){fis.close();}
         }catch(IOException ioe){
             ioe.printStackTrace();
         }
@@ -299,7 +341,7 @@ public class Cliente {
                         if(totalLeidos >= tamTotal){break;}
                     }
                 }
-                f = new FileReader(file);
+                f  = new FileReader(file);
                 br = new BufferedReader(f);
                 tamTotal = Long.parseLong(br.readLine());
             }
