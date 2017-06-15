@@ -12,4 +12,8 @@ Descripción
 
 4. Cuando se envía un archivo se recorre la lista de servidores (Atributo contactos), se crea un socket tcp que se conecta a uno de los servidores de la lista y se envia a cada uno 500 MB del archivo hasta que se envía el total del mismo. (Método enviarArchivo en Cliente:88). Se envia el nombre del archivo, el número del fragmento (1,2,...,n) y el tamaño del fragmento.
 
-5. El servidor tcp de cada nodo opera en un hilo, y a su vez para cada cliente conectado genera un hilo (servidor no bloqueante) (Constructor de la clase Cliente en Cliente.java:31 y método aceptaConexion en Servidor.java:33).
+5. Cuando un cliente recibe un fragmento del archivo, se guarda en el paquete updates.archivos con el formato nombreDelArchivo.partx, por ejemplo archivo.txt.part3.
+
+6. El servidor tcp de cada nodo opera en un hilo, y a su vez para cada cliente conectado genera un hilo (servidor no bloqueante) (Constructor de la clase Cliente en Cliente.java:31 y método aceptaConexion en Servidor.java:33).
+
+7. Una vez enviado el archivo, el cliente genera un descriptor del archivo en el paquete updates.metadatos que contiene la informacion de que fragmento se envio a cada ip. Este archivo se envia por multicast a todos los clientes. Cada cliente lee el archivo y genera una carpeta propia en updates.metadatos, donde guarda dicho archivo.
