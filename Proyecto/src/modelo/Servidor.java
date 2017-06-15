@@ -3,6 +3,7 @@ package modelo;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -65,8 +66,9 @@ public class Servidor extends Thread{
             nombre=dis.readUTF();
             int parte = dis.readInt();
             long tamanio=dis.readLong();
+            String path = crearDirectorio();
             System.out.println("Leyendo archivo " + nombre + ".part" + parte);
-            DataOutputStream dos=new DataOutputStream(new FileOutputStream(new File("src/updates/archivos/"+nombre + ".part" + parte)));
+            DataOutputStream dos=new DataOutputStream(new FileOutputStream(new File(path + nombre + ".part" + parte)));
             System.out.println("Tam: " + tamanio);
             long leidos=0;
             int n=0;
@@ -89,6 +91,39 @@ public class Servidor extends Thread{
 
     }
     
+    public void enviar(Socket cliente){
+        try{
+            DataInputStream dis = new DataInputStream(cliente.getInputStream());
+            DataOutputStream dos = new DataOutputStream(cliente.getOutputStream());
+            String archivo = dis.readUTF();
+            String fragmento = dis.readUTF();
+            String ip = this.servidor.getInetAddress().getHostAddress();
+            int puerto = this.servidor.getLocalPort();
+            String id = ip + ":" + puerto;
+            String pathArchivo = "src/updates/archivos/" + id + "/" + archivo + ".part" + fragmento;
+            File elArchivo = new File(pathArchivo);
+            long tam = elArchivo.length();
+            dos.writeLong(tam);
+            DataInputStream fis = new DataInputStream(new FileInputStream(elArchivo));
+            long enviados = 0;
+            byte []buffer = new byte[1500];
+            while(enviados < tam){
+                int leidos = fis.read(buffer);
+                if(leidos < 1){break;}
+                dos.write(buffer, 0 , leidos);
+                enviados+=leidos;
+                int porcentaje = (int) ((enviados * 100)/tam);
+                System.out.print("\rEnviado: " + porcentaje + "%");
+            }
+            dis.close();
+            dos.close();
+            fis.close();
+            cliente.close();
+        }catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+    }
+    
     private class HiloCliente extends Thread{
         private Socket cliente;
         public HiloCliente(Socket cliente){
@@ -99,12 +134,39 @@ public class Servidor extends Thread{
             try{
                 DataInputStream dis=new DataInputStream(cliente.getInputStream());
                 System.out.println("Cliente conectado desde "+cliente.getInetAddress().getHostAddress()+":"+cliente.getPort()); 
-                recibe(dis);
+                String operacion = dis.readUTF();
+                if("subir".equals(operacion)){recibe(dis);}
+                else if("descargar".equals(operacion)){enviar(cliente);}
                 terminaConexion();
             }catch(IOException ioe){
                 ioe.printStackTrace();
             }
         }
+    }
+    
+    private String crearDirectorio(){
+        String ip = this.servidor.getInetAddress().getHostAddress();
+        int puerto = this.servidor.getLocalPort();
+        String id = ip + ":" + puerto;
+        File theDir = new File("src/updates/archivos/" + id + "/");
+
+        // if the directory does not exist, create it
+        if (!theDir.exists()) {
+            //System.out.println("creating directory: " + theDir.getName());
+            boolean result = false;
+
+            try{
+                theDir.mkdir();
+                result = true;
+            } 
+            catch(SecurityException se){
+                //handle it
+            }        
+            if(result) {    
+                //System.out.println("DIR created");  
+            }
+        }
+        return "src/updates/archivos/" + id + "/";
     }
     /*
     public static void main(String []args){

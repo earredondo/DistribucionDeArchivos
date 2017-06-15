@@ -17,6 +17,9 @@ public class Anuncio extends Thread{
   private int puerto;
   private String usuario;
   private DefaultListModel contactos;
+  private final Object pauseLock = new Object();
+  private volatile boolean running = true;
+  private volatile boolean paused = false;
   
   public Anuncio(ArrayList usuarios,MulticastSocket socket,InetAddress grupo,int puerto,String usuario,DefaultListModel contactos){
     super("Anuncio");
@@ -30,15 +33,42 @@ public class Anuncio extends Thread{
   
   public void run(){
     try{
-        while(true){
-            enviarAnuncio();
-            verificarUsuarios();
-            sleep(5000);
+        while(running){
+            synchronized (pauseLock) {
+                if (paused) {
+                    try {
+                        pauseLock.wait(); // will cause this Thread to block until 
+                                          // another thread calls pauseLock.notifyAll()
+                                          // Note that calling wait() will 
+                                          // relinquish the synchronized lock that this 
+                                          // thread holds on pauseLock so another thread
+                                          // can acquire the lock to call notifyAll()
+                                          // (link with explanation below this code)
+                    } catch (InterruptedException ex) {
+                        break;
+                    }
+                }
+                enviarAnuncio();
+                verificarUsuarios();
+                sleep(5000);
+            }
         }
     }catch(Exception e){
         e.printStackTrace();
     }
   }
+  
+  public void pause() {
+        // you may want to throw an IllegalStateException if !running
+        paused = true;
+    }
+
+    public void resum() {
+        synchronized (pauseLock) {
+            paused = false;
+            pauseLock.notifyAll(); // Unblocks thread
+        }
+    }
   
   public void enviarMensaje(String mensaje){
         DatagramPacket paquete = new DatagramPacket(mensaje.getBytes(),mensaje.length(),grupo,puerto);

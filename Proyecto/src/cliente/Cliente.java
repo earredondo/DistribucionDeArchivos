@@ -1,11 +1,16 @@
 package cliente;
 
+import java.awt.BorderLayout;
+import java.awt.Container;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
@@ -14,7 +19,12 @@ import java.net.MulticastSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JProgressBar;
+import javax.swing.border.Border;
 import modelo.Servidor;
 
 public class Cliente {
@@ -30,20 +40,25 @@ public class Cliente {
     private hiloEscucha oyente;
     private ArrayList usuarios;
     private DefaultListModel contactos;
+    private DefaultListModel archivos;
     private Anuncio anuncio;
     private final long FRAGMENT_SIZE;
+    private final int VECES_REPETIDO;
     
-    public Cliente(DefaultListModel contactos){
+    public Cliente(DefaultListModel contactos, DefaultListModel archivos){
         this.FRAGMENT_SIZE = 268435456l;
-        this.ipServidor = "127.0.0.1";
+        this.VECES_REPETIDO = 2;
+        this.ipServidor = "192.168.0.2";
         this.ipCliente = "127.0.0.1";
         grupo = null;
         usuarios = new ArrayList();
         this.contactos = contactos;
+        this.archivos = archivos;
         try{
-            servidor=new ServerSocket(0);
+            servidor=new ServerSocket(0, 5, InetAddress.getByName(ipServidor));
             this.puertoServidor = this.servidor.getLocalPort();
             new Servidor(servidor).start();
+            new MonitorArchivos(this.archivos, this.ipServidor + ":" + this.puertoServidor).start();
         }catch(IOException ioe){
             ioe.printStackTrace();
         }
@@ -97,12 +112,26 @@ public class Cliente {
             File meta = new File("src/updates/metadatos/"+archivo.getName());
             
             int numClientes = contactos.size();
+            int i, j, vecesEnviado = 0;
             long tam = archivo.length();
             byte []buffer = new byte[4096];
             long enviados = 0, totalEnviados = 0;
             FileInputStream fis = new FileInputStream(archivo);
             FileOutputStream fos = new FileOutputStream(meta);
-            for (int i = 0; i < contactos.size(); i++) {    //Para cada cliente conectado
+            fos.write(("" + tam + "\n").getBytes());
+            /* Barra de progreso */
+            JFrame f = new JFrame("Cargando archivo");
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            Container content = f.getContentPane();
+            JProgressBar progressBar = new JProgressBar();
+            progressBar.setValue(0);
+            progressBar.setStringPainted(true);
+            Border border = BorderFactory.createTitledBorder("Enviando...");
+            progressBar.setBorder(border);
+            content.add(progressBar, BorderLayout.NORTH);
+            f.setSize(300, 100);
+            f.setVisible(true);
+            for (i = 0, j = 1; i < contactos.size(); i++, j++) {    //Para cada cliente conectado
                 if (!contactos.isEmpty()) {
                     String datosServidor = (String)contactos.getElementAt(i);
                     System.out.println(datosServidor);
@@ -111,15 +140,16 @@ public class Cliente {
                     int puerto = Integer.parseInt(ipPuerto[1]);
                     Socket cliente = new Socket(ip, puerto);
                     DataOutputStream dis = new DataOutputStream(cliente.getOutputStream());
-                    if(totalEnviados >= tam){break;}
                     long restantes = tam - totalEnviados;
                     System.out.println("Enviando archivo " + archivo.getName());
+                    dis.writeUTF("subir");
                     dis.writeUTF(archivo.getName());
-                    dis.writeInt(i + 1);
-                    fos.write(((i+1) + ":" +datosServidor + "\n").getBytes());
+                    dis.writeInt(j);
+                    fos.write(((j) + "-" +datosServidor + "\n").getBytes());
                     if(restantes >= FRAGMENT_SIZE){dis.writeLong(FRAGMENT_SIZE);}
                     else{dis.writeLong(restantes);}
                     enviados = 0;
+                    
                     while(enviados < FRAGMENT_SIZE){
                         int leidos = fis.read(buffer);
                         if(leidos < 1){break;}
@@ -128,16 +158,26 @@ public class Cliente {
                         totalEnviados += leidos;
                         int porcentaje = (int) ((totalEnviados * 100)/tam);
                         System.out.print("\rEnviado: " + porcentaje + "%");
+                        progressBar.setValue(porcentaje);
                     }
                     dis.close();
                     cliente.close();
+                    if(totalEnviados >= tam){
+                        if(++vecesEnviado == this.VECES_REPETIDO){break;}
+                        totalEnviados = 0;
+                        j = 0;
+                        fis = new FileInputStream(archivo);
+                    }
                 }
             }
+            f.setVisible(false);
             fos.close();
             
             /*Enviar por multicast el descriptor de archivo */
-            enviarMensaje("<archivo>");
-            enviarArchivo(meta);
+                anuncio.pause();
+                enviarMensaje("<archivo>");
+                enviarArchivo(meta);
+                anuncio.resum();
         }catch(IOException ioe){
             ioe.printStackTrace();
         }
@@ -152,7 +192,6 @@ public class Cliente {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
             String nombre = archivo.getName();
-            System.out.println("NOmbre: " + nombre);
             long tamanio = archivo.length();
             String path = archivo.getAbsolutePath();
             DataInputStream dis = new DataInputStream(new FileInputStream(path));
@@ -164,7 +203,6 @@ public class Cliente {
 
             /*Envia tamanio*/
             buffer = ("" + tamanio).getBytes();
-            System.out.println(numeroPaquete + ":" + buffer.length);
             Paquete paquete = new Paquete(numeroPaquete++,buffer);
             oos.writeObject(paquete);
             oos.flush();
@@ -206,22 +244,89 @@ public class Cliente {
             dis.close();
             oos.close();
             baos.close();
-            System.out.println("\nArchivo enviado: " + numeroPaquete);
         }catch(IOException | InterruptedException ex){
             ex.printStackTrace();
             System.out.println("Ha ocurrido un grave error al enviar archivo: " + ex.getLocalizedMessage());
         }
     }
     
+    public void descargar(String archivo){
+        String path = "src/updates/metadatos/" + this.getId() + "/";
+        String pathArchivo = "src/updates/archivos/" + archivo;
+        File file = new File(path + archivo);
+        try{
+            DataOutputStream fos=new DataOutputStream(new FileOutputStream(new File(pathArchivo)));
+            FileReader f = new FileReader(file);
+            BufferedReader br = new BufferedReader(f);
+            long tamTotal = Long.parseLong(br.readLine());
+            long totalLeidos = 0;
+            String cadena;
+            String []datosServidor;
+            int fragmentoActual = 1;
+            while(totalLeidos < tamTotal){
+                while((cadena = br.readLine())!=null) {
+                    datosServidor = cadena.split("-");
+                    if(datosServidor[0].equals("" + fragmentoActual)){
+                        datosServidor = datosServidor[1].split(":");
+                        Socket cliente = null;
+                        try{
+                            cliente = new Socket(datosServidor[0], Integer.parseInt(datosServidor[1]));
+                        }catch(IOException ioe){
+                            System.out.println("El nodo con el fragmento esta desconectado");
+                            continue;
+                        }
+                        DataOutputStream dos = new DataOutputStream(cliente.getOutputStream());
+                        DataInputStream dis = new DataInputStream(cliente.getInputStream());
+                        dos.writeUTF("descargar");
+                        dos.writeUTF(archivo);
+                        dos.writeUTF("" + fragmentoActual);
+                        long tam = dis.readLong();
+                        long leidos = 0;
+                        int n;
+                        byte []buffer =  new byte[1500];
+                        int porcentaje;
+                        while(leidos < tam){
+                            n=dis.read(buffer);
+                            fos.write(buffer, 0, n);
+                            leidos+=n;
+                            totalLeidos += n;
+                            porcentaje=(int)(leidos*100/tam);
+                            System.out.print("\rRecibido: "+porcentaje+"%");
+                        }
+                        dos.close();
+                        dis.close();
+                        fragmentoActual++;
+                        if(totalLeidos >= tamTotal){break;}
+                    }
+                }
+                f = new FileReader(file);
+                br = new BufferedReader(f);
+                tamTotal = Long.parseLong(br.readLine());
+            }
+            fos.close();
+        }catch(IOException ioe){
+            ioe.printStackTrace();
+        }
+    }
     
-    /*public static void main(String[] args){
-        Cliente cliente=new Cliente("Edgar");
-        cliente.unirAGrupo("230.1.1.1",4000);
-        cliente.entrarAChat();
-        cliente.escucharMensajes();
-        cliente.enviarMensajePublico("Hola :D amigos8|");
-        cliente.enviarMensajePrivado("Jose", ":DComo estas? :D");
-        while(true);
-        //cliente.salir();
-    }*/
+    public static void main(String[] args){
+        JFrame f = new JFrame("Cargando archivo");
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Container content = f.getContentPane();
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setValue(0);
+        progressBar.setStringPainted(true);
+        Border border = BorderFactory.createTitledBorder("Enviando...");
+        progressBar.setBorder(border);
+        content.add(progressBar, BorderLayout.NORTH);
+        f.setSize(300, 100);
+        f.setVisible(true);
+        for (int i = 0; i < 100; i++) {
+            progressBar.setValue(i);
+            try{
+                Thread.sleep(10);
+            }catch(InterruptedException ie){
+            }
+        }
+    }
 }

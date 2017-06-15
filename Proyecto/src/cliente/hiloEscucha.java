@@ -98,12 +98,11 @@ public class hiloEscucha extends Thread{
                 switch (objeto.getNumero()) {
                     case (-1):
                         tamanio = Long.parseLong(new String(objeto.getDatos(), 0, objeto.getDatos().length));
-                        System.out.println("Tamanio: " + tamanio);
                         break;
                     case 0:
                         nombre=new String(objeto.getDatos(),0,objeto.getDatos().length);
                         if (archivo.renameTo(new File(RUTA + nombre))) {
-                            System.out.println("Archivo " + nombre + " renombrado exitosamente.");
+                            //System.out.println("Archivo " + nombre + " renombrado exitosamente.");
                         } else {
                             archivo = new File(RUTA + nombre);
                         }
@@ -112,7 +111,6 @@ public class hiloEscucha extends Thread{
                         } catch (FileNotFoundException ex) {
                             throw new FileNotFoundException("Error de archivo: " + ex.getMessage());
                         }
-                        System.out.println("Nombre:" + nombre);
                         break;
                     default:
                         if (recibidos == 0) {
@@ -130,6 +128,7 @@ public class hiloEscucha extends Thread{
             }
         } catch (IOException | ClassNotFoundException | NumberFormatException ex) {
             System.out.println("Ha ocurrido un grave error: " + ex.getLocalizedMessage());
+            ex.printStackTrace();
         }
         System.out.println("Archivo recibido");
     }
@@ -139,7 +138,7 @@ public class hiloEscucha extends Thread{
 
         // if the directory does not exist, create it
         if (!theDir.exists()) {
-            System.out.println("creating directory: " + theDir.getName());
+            //System.out.println("creating directory: " + theDir.getName());
             boolean result = false;
 
             try{
@@ -150,10 +149,9 @@ public class hiloEscucha extends Thread{
                 //handle it
             }        
             if(result) {    
-                System.out.println("DIR created");  
+                //System.out.println("DIR created");  
             }
         }
         return "src/updates/metadatos/" + this.usuario + "/";
-
     }
 }

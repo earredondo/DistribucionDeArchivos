@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import javax.swing.JFileChooser;
 import cliente.Cliente;
+import javax.swing.JOptionPane;
 
 
 /**
@@ -17,17 +18,19 @@ public class VistaCliente extends javax.swing.JFrame {
     private JFileChooser archivos;
     private File lista[];
     private javax.swing.DefaultListModel modelo;
+    private javax.swing.DefaultListModel modeloArchivos;
             
     /**
      * Creates new form VistaCliente
      */
     public VistaCliente() {
         modelo = new javax.swing.DefaultListModel();
+        modeloArchivos = new javax.swing.DefaultListModel();
         lista=new File[0];
         initComponents();
-        cliente=new Cliente(modelo);
+        cliente=new Cliente(modelo, modeloArchivos);
         setTitle(cliente.getId());
-        cliente.unirAGrupo("224.0.0.1",4000);
+        cliente.unirAGrupo("225.0.0.37",4000);
         cliente.enviarMiIp();
         cliente.escucharMensajes();
         
@@ -52,12 +55,16 @@ public class VistaCliente extends javax.swing.JFrame {
         jScrollPane2 = new javax.swing.JScrollPane();
         listConnections = new javax.swing.JList<>();
         labelConnections = new javax.swing.JLabel();
+        labelConnections1 = new javax.swing.JLabel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        listFiles = new javax.swing.JList<>();
+        descargarArchivo = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Cliente");
 
         tituloEtiquetaEditorPane.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        tituloEtiquetaEditorPane.setText("Lista de archivos: ");
+        tituloEtiquetaEditorPane.setText("Archivos a enviar");
 
         seleccionArchivos.setText("Seleccionar archivo");
         seleccionArchivos.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -116,29 +123,57 @@ public class VistaCliente extends javax.swing.JFrame {
             labelConnections.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
             labelConnections.setText("Lista de usuarios:");
 
+            labelConnections1.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+            labelConnections1.setText("Archivos disponibles:");
+
+            listFiles.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+            listFiles.setModel(modeloArchivos);
+            jScrollPane3.setViewportView(listFiles);
+
+            descargarArchivo.setText("Descargar");
+            descargarArchivo.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    descargarArchivoMouseClicked(evt);
+                }
+            });
+            descargarArchivo.addActionListener(new java.awt.event.ActionListener() {
+                public void actionPerformed(java.awt.event.ActionEvent evt) {
+                    descargarArchivoActionPerformed(evt);
+                }
+            });
+
             javax.swing.GroupLayout contenedorPrincipalLayout = new javax.swing.GroupLayout(contenedorPrincipal);
             contenedorPrincipal.setLayout(contenedorPrincipalLayout);
             contenedorPrincipalLayout.setHorizontalGroup(
                 contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(contenedorPrincipalLayout.createSequentialGroup()
                     .addGap(39, 39, 39)
-                    .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(contenedorPrincipalLayout.createSequentialGroup()
-                            .addComponent(tituloEtiquetaEditorPane)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(labelConnections))
-                        .addComponent(separador, javax.swing.GroupLayout.PREFERRED_SIZE, 538, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(102, 102, 102)
+                            .addComponent(seleccionArchivos)
+                            .addGap(84, 84, 84)
+                            .addComponent(envioArchivos, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(scrollPanelTextArea, javax.swing.GroupLayout.PREFERRED_SIZE, 499, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(tituloEtiquetaEditorPane)
+                        .addComponent(separador, javax.swing.GroupLayout.PREFERRED_SIZE, 538, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(contenedorPrincipalLayout.createSequentialGroup()
                             .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(contenedorPrincipalLayout.createSequentialGroup()
-                                    .addGap(102, 102, 102)
-                                    .addComponent(seleccionArchivos)
-                                    .addGap(84, 84, 84)
-                                    .addComponent(envioArchivos, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addComponent(scrollPanelTextArea, javax.swing.GroupLayout.PREFERRED_SIZE, 499, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGap(18, 18, 18)
-                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 131, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addComponent(labelConnections)
+                                .addComponent(labelConnections1)
+                                .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addContainerGap())
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, contenedorPrincipalLayout.createSequentialGroup()
+                            .addGap(0, 3, Short.MAX_VALUE)
+                            .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, contenedorPrincipalLayout.createSequentialGroup()
+                                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(21, 21, 21))
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, contenedorPrincipalLayout.createSequentialGroup()
+                                    .addComponent(descargarArchivo, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(47, 47, 47))))))
             );
             contenedorPrincipalLayout.setVerticalGroup(
                 contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -147,16 +182,24 @@ public class VistaCliente extends javax.swing.JFrame {
                     .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(tituloEtiquetaEditorPane)
                         .addComponent(labelConnections))
-                    .addGap(2, 2, 2)
-                    .addComponent(separador, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                    .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jScrollPane2)
-                        .addComponent(scrollPanelTextArea, javax.swing.GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE))
+                    .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(contenedorPrincipalLayout.createSequentialGroup()
+                            .addGap(2, 2, 2)
+                            .addComponent(separador, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                            .addComponent(scrollPanelTextArea, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(contenedorPrincipalLayout.createSequentialGroup()
+                            .addGap(18, 18, 18)
+                            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(labelConnections1)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGap(28, 28, 28)
                     .addGroup(contenedorPrincipalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(seleccionArchivos)
-                        .addComponent(envioArchivos))
+                        .addComponent(envioArchivos)
+                        .addComponent(descargarArchivo))
                     .addContainerGap(19, Short.MAX_VALUE))
             );
 
@@ -173,6 +216,21 @@ public class VistaCliente extends javax.swing.JFrame {
 
             pack();
         }// </editor-fold>//GEN-END:initComponents
+
+    private void envioArchivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_envioArchivosActionPerformed
+
+    }//GEN-LAST:event_envioArchivosActionPerformed
+
+    private void envioArchivosMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_envioArchivosMouseClicked
+        //cliente.envia(lista);
+        cliente.enviarArchivo(lista);
+        areaArchivos.append("\nSelecciona nuevos archivos\n\n");
+        lista=new File[0];
+    }//GEN-LAST:event_envioArchivosMouseClicked
+
+    private void seleccionArchivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_seleccionArchivosActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_seleccionArchivosActionPerformed
 
     private void seleccionArchivosMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_seleccionArchivosMouseClicked
         archivos = new JFileChooser();
@@ -198,20 +256,22 @@ public class VistaCliente extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_seleccionArchivosMouseClicked
 
-    private void seleccionArchivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_seleccionArchivosActionPerformed
+    private void descargarArchivoMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_descargarArchivoMouseClicked
+        int index = listFiles.getSelectedIndex();
+        if(index < 0){
+            JOptionPane.showMessageDialog(null,
+                "Selecciona al menos un archivo de la lista",
+                "Advertencia",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        String archivo = (String)(modeloArchivos.getElementAt(index));
+        cliente.descargar(archivo);
+    }//GEN-LAST:event_descargarArchivoMouseClicked
+
+    private void descargarArchivoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_descargarArchivoActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_seleccionArchivosActionPerformed
-
-    private void envioArchivosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_envioArchivosActionPerformed
-        
-    }//GEN-LAST:event_envioArchivosActionPerformed
-
-    private void envioArchivosMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_envioArchivosMouseClicked
-        //cliente.envia(lista);
-        cliente.enviarArchivo(lista);
-        areaArchivos.append("\nSelecciona nuevos archivos\n\n");
-        lista=new File[0];
-    }//GEN-LAST:event_envioArchivosMouseClicked
+    }//GEN-LAST:event_descargarArchivoActionPerformed
 
     /**
      * @param args the command line arguments
@@ -251,10 +311,14 @@ public class VistaCliente extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTextArea areaArchivos;
     private javax.swing.JPanel contenedorPrincipal;
+    private javax.swing.JButton descargarArchivo;
     private javax.swing.JButton envioArchivos;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JLabel labelConnections;
+    private javax.swing.JLabel labelConnections1;
     private javax.swing.JList<String> listConnections;
+    private javax.swing.JList<String> listFiles;
     private javax.swing.JScrollPane scrollPanelTextArea;
     private javax.swing.JButton seleccionArchivos;
     private javax.swing.JSeparator separador;
